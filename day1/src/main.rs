@@ -12,22 +12,14 @@ const PART1: bool = false;
 fn main() -> anyhow::Result<()> {
     let input = std::fs::read_to_string("input.txt")?;
 
-    let sum: u32 = if PART1 {
-        input
-            .lines()
-            .map(|line| {
-                let digits = line
-                    .chars()
+    let sum: u32 = input
+        .lines()
+        .map(|line| {
+            let digits = if PART1 {
+                line.chars()
                     .filter_map(|c| c.to_digit(10))
-                    .collect::<Vec<_>>();
-
-                10 * digits.first().copied().unwrap_or(0) + digits.last().copied().unwrap_or(0)
-            })
-            .sum()
-    } else {
-        input
-            .lines()
-            .map(|line| {
+                    .collect::<Vec<_>>()
+            } else {
                 let mut line = line.to_string();
                 let mut digits = vec![];
 
@@ -50,10 +42,12 @@ fn main() -> anyhow::Result<()> {
                     line.remove(0);
                 }
 
-                10 * digits.first().copied().unwrap_or(0) + digits.last().copied().unwrap_or(0)
-            })
-            .sum()
-    };
+                digits
+            };
+
+            10 * digits.first().copied().unwrap_or(0) + digits.last().copied().unwrap_or(0)
+        })
+        .sum();
 
     println!("{sum}");
 
