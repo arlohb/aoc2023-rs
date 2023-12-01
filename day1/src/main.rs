@@ -32,25 +32,18 @@ fn main() -> anyhow::Result<()> {
                 let mut digits = vec![];
 
                 while !line.is_empty() {
-                    if line.find("one") == Some(0) {
-                        digits.push(1);
-                    } else if line.find("two") == Some(0) {
-                        digits.push(2);
-                    } else if line.find("three") == Some(0) {
-                        digits.push(3);
-                    } else if line.find("four") == Some(0) {
-                        digits.push(4);
-                    } else if line.find("five") == Some(0) {
-                        digits.push(5);
-                    } else if line.find("six") == Some(0) {
-                        digits.push(6);
-                    } else if line.find("seven") == Some(0) {
-                        digits.push(7);
-                    } else if line.find("eight") == Some(0) {
-                        digits.push(8);
-                    } else if line.find("nine") == Some(0) {
-                        digits.push(9);
-                    } else if let Some(d) = line.chars().next().unwrap_or('\0').to_digit(10) {
+                    for (i, &digit_str) in [
+                        "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
+                    ]
+                    .iter()
+                    .enumerate()
+                    {
+                        if line.find(digit_str) == Some(0) {
+                            digits.push(i as u32 + 1);
+                        }
+                    }
+
+                    if let Some(d) = line.chars().next().unwrap_or('\0').to_digit(10) {
                         digits.push(d);
                     }
 
