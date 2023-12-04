@@ -21,13 +21,13 @@ impl Card {
         self.wins.intersection(&self.nums).count() as u32
     }
 
-    pub fn score(&self) -> u32 {
+    pub fn score(&self) -> u64 {
         let win_count = self.win_count();
 
         if win_count == 0 {
             0
         } else {
-            2u32.pow(win_count - 1)
+            2u64.pow(win_count - 1)
         }
     }
 }
@@ -52,16 +52,44 @@ impl FromStr for Card {
     }
 }
 
+fn process_cards(cards: &mut [(Card, u64)]) {
+    let cards_len = cards.len();
+
+    for i in 0..cards.len() {
+        let (card, this_count) = &mut cards[i];
+        let this_count = *this_count;
+        let wins = card.win_count();
+
+        for (_, count) in &mut cards[i + 1..=(i + wins as usize).min(cards_len - 1)] {
+            *count += this_count;
+        }
+    }
+}
+
+const PART1: bool = false;
+
 fn main() -> anyhow::Result<()> {
     let input = std::fs::read_to_string("input.txt")?;
 
-    let sum: u32 = input
-        .lines()
-        .map(Card::from_str)
-        .collect::<Result<Vec<_>, _>>()?
-        .iter()
-        .map(Card::score)
-        .sum();
+    let sum: u64 = if PART1 {
+        input
+            .lines()
+            .map(Card::from_str)
+            .collect::<Result<Vec<_>, _>>()?
+            .iter()
+            .map(Card::score)
+            .sum()
+    } else {
+        let mut cards = input
+            .lines()
+            .map(Card::from_str)
+            .map(|card| card.map(|card| (card, 1)))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        process_cards(&mut cards);
+
+        cards.into_iter().map(|(_, count)| count).sum()
+    };
 
     println!("{sum}");
 
