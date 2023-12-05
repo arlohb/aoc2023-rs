@@ -8,10 +8,9 @@
     clippy::cast_sign_loss
 )]
 
-use std::{ops::Range, str::FromStr};
-
 use anyhow::Context;
 use itertools::Itertools;
+use std::{ops::Range, str::FromStr};
 
 pub struct Map {
     pub ranges: Vec<(Range<u64>, i64)>,
@@ -100,27 +99,52 @@ impl Pipeline {
     }
 }
 
-fn main() -> anyhow::Result<()> {
-    let input = std::fs::read_to_string("input.txt")?;
-    let mut lines = input.lines();
+const PART1: bool = false;
 
-    let seeds = lines
+fn parse_seeds(input: &str) -> anyhow::Result<impl Iterator<Item = u64>> {
+    let nums = input
+        .lines()
         .next()
-        .context("Invalid input")?
+        .context("invalid input")?
         .split_once(": ")
-        .context("Invalid input")?
+        .context("invalid input")?
         .1
         .split(' ')
         .map(u64::from_str)
         .collect::<Result<Vec<_>, _>>()?;
 
-    let pipeline = Pipeline::from_str(&input)?;
+    Ok(nums.into_iter())
+}
 
-    let lowest_location = seeds
-        .into_iter()
+fn parse_seeds_2(seeds: impl Iterator<Item = u64>) -> impl Iterator<Item = u64> {
+    // Yes, part 2 takes 59 mins and 50 secs to run
+    // No, I don't think I'll optimise it
+    seeds
+        .tuples()
+        .flat_map(|(start, length)| start..start + length)
+}
+
+fn calc_lowest_location(
+    pipeline: &Pipeline,
+    seeds: impl Iterator<Item = u64>,
+) -> anyhow::Result<u64> {
+    seeds
         .map(|seed| pipeline.seed_to_location(seed))
         .min()
-        .context("Invalid input")?;
+        .context("Invalid input")
+}
+
+fn main() -> anyhow::Result<()> {
+    let input = std::fs::read_to_string("input.txt")?;
+    let seeds = parse_seeds(&input)?;
+
+    let pipeline = Pipeline::from_str(&input)?;
+
+    let lowest_location = if PART1 {
+        calc_lowest_location(&pipeline, seeds)?
+    } else {
+        calc_lowest_location(&pipeline, parse_seeds_2(seeds))?
+    };
 
     println!("{lowest_location}");
 
