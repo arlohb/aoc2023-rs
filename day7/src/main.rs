@@ -104,21 +104,15 @@ impl PartialOrd<Self> for Hand {
 impl Ord for Hand {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         let mut ord = HandType::calc(*self).cmp(&HandType::calc(*other));
-        if ord == std::cmp::Ordering::Equal {
-            ord = self.original[0].cmp(&other.original[0]);
+
+        for i in 0..5 {
             if ord == std::cmp::Ordering::Equal {
-                ord = self.original[1].cmp(&other.original[1]);
-                if ord == std::cmp::Ordering::Equal {
-                    ord = self.original[2].cmp(&other.original[2]);
-                    if ord == std::cmp::Ordering::Equal {
-                        ord = self.original[3].cmp(&other.original[3]);
-                        if ord == std::cmp::Ordering::Equal {
-                            ord = self.original[4].cmp(&other.original[4]);
-                        }
-                    }
-                }
+                ord = self.original[i].cmp(&other.original[i]);
+            } else {
+                break;
             }
         }
+
         ord
     }
 }
