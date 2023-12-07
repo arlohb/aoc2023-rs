@@ -4,6 +4,7 @@
     clippy::module_name_repetitions,
     clippy::cast_precision_loss,
     clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
     clippy::cast_sign_loss
 )]
 
@@ -11,16 +12,22 @@ use std::str::FromStr;
 
 use anyhow::Context;
 
-const fn dist_travelled(race_time: u64, btn_time: u64) -> u64 {
-    let travel_time = race_time - btn_time;
-    let speed = btn_time;
-    travel_time * speed
+fn solve_quadratic(a: i64, b: i64, c: i64) -> (f64, f64) {
+    let discriminant = ((b.pow(2) - 4 * a * c) as f64).sqrt();
+    (
+        (-b as f64 + discriminant) / (2. * a as f64),
+        (-b as f64 - discriminant) / (2. * a as f64),
+    )
 }
 
 fn num_of_wins(race_time: u64, dist: u64) -> u64 {
-    (0..race_time)
-        .filter(|btn_time| dist_travelled(race_time, *btn_time) > dist)
-        .count() as u64
+    // dist_travelled = (race_time - btn_time) * btn_time;
+    // dist_travelled > dist when -btn_time^2 + race_time*btn_time - dist > 0
+    let (sol1, sol2) = solve_quadratic(-1, race_time as i64, -(dist as i64));
+    let sol1 = (sol1 + 0.00001).ceil() as u64;
+    let sol2 = (sol2 - 0.00001).floor() as u64;
+
+    sol1.abs_diff(sol2) + 1
 }
 
 const PART1: bool = false;
