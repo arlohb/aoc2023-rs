@@ -207,12 +207,9 @@ fn main() -> anyhow::Result<()> {
         .filter_map(|(hand, bid)| u32::from_str(bid).ok().map(|bid| (hand, bid)))
         .collect::<Vec<_>>();
 
-    hands.sort_by_key(|(hand, _)| {
-        if PART1 {
-            *hand
-        } else {
-            let mut hand = *hand;
-            let most_freq = most_freq(hand);
+    if !PART1 {
+        for (hand, _) in &mut hands {
+            let most_freq = most_freq(*hand);
 
             if hand.wild[0] == Card(11) {
                 hand.wild[0] = most_freq;
@@ -229,10 +226,10 @@ fn main() -> anyhow::Result<()> {
             if hand.wild[4] == Card(11) {
                 hand.wild[4] = most_freq;
             }
-
-            hand
         }
-    });
+    }
+
+    hands.sort_by_key(|(hand, _)| *hand);
 
     let winnings: u32 = hands
         .into_iter()
