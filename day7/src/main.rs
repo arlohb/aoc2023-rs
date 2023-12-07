@@ -7,12 +7,33 @@
     clippy::cast_sign_loss
 )]
 
-use std::str::FromStr;
+use std::{fmt::Display, str::FromStr};
 
 use anyhow::Context;
 
-#[derive(PartialEq, Eq, Clone, Copy, PartialOrd, Ord, Debug)]
+const PART1: bool = false;
+
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 struct Card(u8);
+
+impl PartialOrd for Card {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Card {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        let process = |rank| {
+            if !PART1 && rank == 11 {
+                0
+            } else {
+                rank
+            }
+        };
+        process(self.0).cmp(&process(other.0))
+    }
+}
 
 impl FromStr for Card {
     type Err = anyhow::Error;
@@ -31,20 +52,36 @@ impl FromStr for Card {
     }
 }
 
+impl Display for Card {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let c = match self.0 {
+            14 => 'A',
+            13 => 'K',
+            12 => 'Q',
+            11 => 'J',
+            10 => 'T',
+            n => char::from_digit(u32::from(n), 10).expect("Invalid input"),
+        };
+
+        write!(f, "{c}")
+    }
+}
+
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-struct Hand([Card; 5]);
+struct Hand([Card; 5], [Card; 5]);
 
 impl FromStr for Hand {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Self([
+        let hand = [
             s[0..=0].parse().context("Invalid input")?,
             s[1..=1].parse().context("Invalid input")?,
             s[2..=2].parse().context("Invalid input")?,
             s[3..=3].parse().context("Invalid input")?,
             s[4..=4].parse().context("Invalid input")?,
-        ]))
+        ];
+        Ok(Self(hand, hand))
     }
 }
 
@@ -58,21 +95,31 @@ impl Ord for Hand {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         let mut ord = HandType::calc(*self).cmp(&HandType::calc(*other));
         if ord == std::cmp::Ordering::Equal {
-            ord = self.0[0].cmp(&other.0[0]);
+            ord = self.1[0].cmp(&other.1[0]);
             if ord == std::cmp::Ordering::Equal {
-                ord = self.0[1].cmp(&other.0[1]);
+                ord = self.1[1].cmp(&other.1[1]);
                 if ord == std::cmp::Ordering::Equal {
-                    ord = self.0[2].cmp(&other.0[2]);
+                    ord = self.1[2].cmp(&other.1[2]);
                     if ord == std::cmp::Ordering::Equal {
-                        ord = self.0[3].cmp(&other.0[3]);
+                        ord = self.1[3].cmp(&other.1[3]);
                         if ord == std::cmp::Ordering::Equal {
-                            ord = self.0[4].cmp(&other.0[4]);
+                            ord = self.1[4].cmp(&other.1[4]);
                         }
                     }
                 }
             }
         }
         ord
+    }
+}
+
+impl Display for Hand {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for card in self.0 {
+            write!(f, "{card}")?;
+        }
+
+        Ok(())
     }
 }
 
@@ -89,7 +136,7 @@ fn hand_freq_set(hand: Hand) -> HandFreqSet {
 
     for (card_i, count) in map.into_iter().enumerate() {
         if count != 0 {
-            set[count as usize - 1].push(Card(card_i as u8));
+            set[count as usize - 1].push(Card(card_i as u8 + 2));
         }
     }
 
@@ -129,6 +176,17 @@ impl HandType {
     }
 }
 
+fn most_freq(hand: Hand) -> Card {
+    let get_notj_item = |v: Vec<Card>| -> Option<Card> { v.into_iter().find(|c| *c != Card(11)) };
+
+    let set = hand_freq_set(hand);
+
+    set.into_iter()
+        .rev()
+        .find_map(get_notj_item)
+        .unwrap_or(Card(13))
+}
+
 fn main() -> anyhow::Result<()> {
     let input = std::fs::read_to_string("input.txt")?;
 
@@ -139,7 +197,32 @@ fn main() -> anyhow::Result<()> {
         .filter_map(|(hand, bid)| u32::from_str(bid).ok().map(|bid| (hand, bid)))
         .collect::<Vec<_>>();
 
-    hands.sort_by_key(|(hand, _)| *hand);
+    hands.sort_by_key(|(hand, _)| {
+        if PART1 {
+            *hand
+        } else {
+            let mut hand = *hand;
+            let most_freq = most_freq(hand);
+
+            if hand.0[0] == Card(11) {
+                hand.0[0] = most_freq;
+            }
+            if hand.0[1] == Card(11) {
+                hand.0[1] = most_freq;
+            }
+            if hand.0[2] == Card(11) {
+                hand.0[2] = most_freq;
+            }
+            if hand.0[3] == Card(11) {
+                hand.0[3] = most_freq;
+            }
+            if hand.0[4] == Card(11) {
+                hand.0[4] = most_freq;
+            }
+
+            hand
+        }
+    });
 
     let winnings: u32 = hands
         .into_iter()
