@@ -68,7 +68,14 @@ impl Display for Card {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-struct Hand([Card; 5], [Card; 5]);
+struct Hand {
+    // This is the hand with J swapped for the best option
+    // This will be same same as original if PART1
+    wild: [Card; 5],
+    // This is with the Js still there
+    // Used for the 2nd ordering rule
+    original: [Card; 5],
+}
 
 impl FromStr for Hand {
     type Err = anyhow::Error;
@@ -81,7 +88,10 @@ impl FromStr for Hand {
             s[3..=3].parse().context("Invalid input")?,
             s[4..=4].parse().context("Invalid input")?,
         ];
-        Ok(Self(hand, hand))
+        Ok(Self {
+            wild: hand,
+            original: hand,
+        })
     }
 }
 
@@ -95,15 +105,15 @@ impl Ord for Hand {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         let mut ord = HandType::calc(*self).cmp(&HandType::calc(*other));
         if ord == std::cmp::Ordering::Equal {
-            ord = self.1[0].cmp(&other.1[0]);
+            ord = self.original[0].cmp(&other.original[0]);
             if ord == std::cmp::Ordering::Equal {
-                ord = self.1[1].cmp(&other.1[1]);
+                ord = self.original[1].cmp(&other.original[1]);
                 if ord == std::cmp::Ordering::Equal {
-                    ord = self.1[2].cmp(&other.1[2]);
+                    ord = self.original[2].cmp(&other.original[2]);
                     if ord == std::cmp::Ordering::Equal {
-                        ord = self.1[3].cmp(&other.1[3]);
+                        ord = self.original[3].cmp(&other.original[3]);
                         if ord == std::cmp::Ordering::Equal {
-                            ord = self.1[4].cmp(&other.1[4]);
+                            ord = self.original[4].cmp(&other.original[4]);
                         }
                     }
                 }
@@ -115,7 +125,7 @@ impl Ord for Hand {
 
 impl Display for Hand {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for card in self.0 {
+        for card in self.wild {
             write!(f, "{card}")?;
         }
 
@@ -128,7 +138,7 @@ type HandFreqSet = [Vec<Card>; 5];
 fn hand_freq_set(hand: Hand) -> HandFreqSet {
     let mut map: [u8; 13] = [0; 13];
 
-    for card in hand.0 {
+    for card in hand.wild {
         map[card.0 as usize - 2] += 1;
     }
 
@@ -204,20 +214,20 @@ fn main() -> anyhow::Result<()> {
             let mut hand = *hand;
             let most_freq = most_freq(hand);
 
-            if hand.0[0] == Card(11) {
-                hand.0[0] = most_freq;
+            if hand.wild[0] == Card(11) {
+                hand.wild[0] = most_freq;
             }
-            if hand.0[1] == Card(11) {
-                hand.0[1] = most_freq;
+            if hand.wild[1] == Card(11) {
+                hand.wild[1] = most_freq;
             }
-            if hand.0[2] == Card(11) {
-                hand.0[2] = most_freq;
+            if hand.wild[2] == Card(11) {
+                hand.wild[2] = most_freq;
             }
-            if hand.0[3] == Card(11) {
-                hand.0[3] = most_freq;
+            if hand.wild[3] == Card(11) {
+                hand.wild[3] = most_freq;
             }
-            if hand.0[4] == Card(11) {
-                hand.0[4] = most_freq;
+            if hand.wild[4] == Card(11) {
+                hand.wild[4] = most_freq;
             }
 
             hand
