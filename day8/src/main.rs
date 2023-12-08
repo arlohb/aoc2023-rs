@@ -7,13 +7,19 @@
     clippy::cast_sign_loss
 )]
 
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Display, time::SystemTime};
 
 use anyhow::Context;
 
 #[derive(PartialEq, Eq, Hash, Clone, Copy)]
 struct Node<'a> {
     id: &'a str,
+}
+
+impl<'a> Display for Node<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.id)
+    }
 }
 
 impl<'a> Node<'a> {
@@ -27,6 +33,14 @@ impl<'a> Node<'a> {
 
     pub fn is_end(&self) -> bool {
         self.id == "ZZZ"
+    }
+
+    pub fn is_start_2(&self) -> bool {
+        &self.id[2..=2] == "A"
+    }
+
+    pub fn is_end_2(&self) -> bool {
+        &self.id[2..=2] == "Z"
     }
 }
 
@@ -66,6 +80,8 @@ impl<'a> Map<'a> {
     }
 }
 
+const PART1: bool = false;
+
 fn main() -> anyhow::Result<()> {
     let input = std::fs::read_to_string("input.txt")?;
     let mut lines = input.lines();
@@ -91,21 +107,60 @@ fn main() -> anyhow::Result<()> {
             .collect::<MapInner>(),
     );
 
-    let mut node = Node::start();
-    let mut i = 0;
+    let mut i: u64 = 0;
 
-    while !node.is_end() {
-        node = map.lookup(
-            node,
-            instructions
+    if PART1 {
+        let mut node = Node::start();
+
+        while !node.is_end() {
+            node = map.lookup(
+                node,
+                instructions
+                    .next()
+                    .context("Ran out of infinite instruction")?,
+            );
+
+            i += 1;
+        }
+    } else {
+        let mut nodes = map
+            .map
+            .keys()
+            .copied()
+            .filter(Node::is_start_2)
+            .collect::<Vec<_>>();
+
+        println!("Num of nodes: {}", nodes.len());
+
+        let mut timer = SystemTime::now();
+        let mut last_i = 0;
+        let mut ips = 0;
+
+        while !nodes.iter().all(Node::is_end_2) {
+            let dir = instructions
                 .next()
-                .context("Ran out of infinite instruction")?,
-        );
+                .context("Ran out of infinite instructions")?;
 
-        i += 1;
+            print!("\r");
+
+            for node in &mut nodes {
+                *node = map.lookup(*node, dir);
+                print!("{node} ");
+            }
+
+            i += 1;
+
+            if timer.elapsed()?.as_millis() >= 1000 {
+                timer = SystemTime::now();
+                ips = i - last_i;
+                last_i = i;
+            }
+
+            print!("{ips} {i}");
+        }
     }
 
-    println!("{i}");
+    println!("\n{i}");
 
     Ok(())
 }
