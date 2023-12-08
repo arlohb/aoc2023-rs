@@ -7,7 +7,10 @@
     clippy::cast_sign_loss
 )]
 
-use std::{collections::HashMap, fmt::Display, time::SystemTime};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt::Display,
+};
 
 use anyhow::Context;
 
@@ -82,18 +85,84 @@ impl<'a> Map<'a> {
 
 const PART1: bool = false;
 
+fn get_repeat(
+    map: &Map,
+    start: Node,
+    mut directions: impl Iterator<Item = Direction>,
+    direction_count: u64,
+) -> u64 {
+    let mut path = vec![start];
+
+    let repeat;
+
+    loop {
+        let dir = directions.next().expect("No directions");
+        let next = map.lookup(*path.last().expect("Path empty"), dir);
+
+        if let Some(i) = path.iter().position(|node| *node == next) {
+            repeat = path.len() - i;
+            break;
+        }
+
+        path.push(next);
+    }
+
+    lcm(&[repeat as u64, direction_count]).expect("Invalid input")
+}
+
+fn prime_factors(mut n: u64) -> HashMap<u64, u64> {
+    let original = n;
+    let mut factors = HashMap::new();
+    let mut i = 2;
+
+    while i < original / 2 {
+        if n % i == 0 {
+            n /= i;
+            *factors.entry(i).or_default() += 1;
+        } else {
+            i += 1;
+        }
+    }
+
+    if factors.is_empty() {
+        factors.insert(original, 1);
+    }
+
+    factors
+}
+
+fn lcm(ns: &[u64]) -> anyhow::Result<u64> {
+    ns.iter()
+        .copied()
+        .map(prime_factors)
+        .reduce(|mut acc, map| {
+            for (k, v) in map {
+                let old = acc.entry(k).or_default();
+                *old = v.max(*old);
+            }
+
+            acc
+        })
+        .context("No nodes")?
+        .into_iter()
+        .flat_map(|(n, e)| vec![n; e as usize])
+        .reduce(|acc, n| acc * n)
+        .context("No nodes")
+}
+
 fn main() -> anyhow::Result<()> {
     let input = std::fs::read_to_string("input.txt")?;
     let mut lines = input.lines();
 
-    let mut instructions = lines
+    let instructions = lines
         .next()
         .context("Invalid input")?
         .chars()
         .map(Direction::from_char)
-        .collect::<Result<Vec<_>, _>>()?
-        .into_iter()
-        .cycle();
+        .collect::<Result<Vec<_>, _>>()?;
+
+    let dir_count = instructions.len();
+    let mut directions = instructions.into_iter().cycle();
 
     let map = Map::from_inner(
         lines
@@ -115,7 +184,7 @@ fn main() -> anyhow::Result<()> {
         while !node.is_end() {
             node = map.lookup(
                 node,
-                instructions
+                directions
                     .next()
                     .context("Ran out of infinite instruction")?,
             );
@@ -123,44 +192,16 @@ fn main() -> anyhow::Result<()> {
             i += 1;
         }
     } else {
-        let mut nodes = map
+        i = lcm(&map
             .map
             .keys()
             .copied()
             .filter(Node::is_start_2)
-            .collect::<Vec<_>>();
-
-        println!("Num of nodes: {}", nodes.len());
-
-        let mut timer = SystemTime::now();
-        let mut last_i = 0;
-        let mut ips = 0;
-
-        while !nodes.iter().all(Node::is_end_2) {
-            let dir = instructions
-                .next()
-                .context("Ran out of infinite instructions")?;
-
-            print!("\r");
-
-            for node in &mut nodes {
-                *node = map.lookup(*node, dir);
-                print!("{node} ");
-            }
-
-            i += 1;
-
-            if timer.elapsed()?.as_millis() >= 1000 {
-                timer = SystemTime::now();
-                ips = i - last_i;
-                last_i = i;
-            }
-
-            print!("{ips} {i}");
-        }
+            .map(|node| get_repeat(&map, node, directions.clone(), dir_count as u64))
+            .collect::<Vec<_>>())?;
     }
 
-    println!("\n{i}");
+    println!("{i}");
 
     Ok(())
 }
