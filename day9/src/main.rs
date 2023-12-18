@@ -45,6 +45,23 @@ impl Sequence {
 
         self.diffs[0].last().copied().unwrap_or(0)
     }
+
+    pub fn predict_back(&mut self) -> i64 {
+        for i in (0..self.diffs.len()).rev() {
+            let below = self
+                .diffs
+                .get(i + 1)
+                .map_or(Some(0), |v| v.first().copied())
+                .unwrap_or(0);
+
+            let right = self.diffs[i].first().copied().unwrap_or(0);
+
+            let next = right - below;
+            self.diffs[i].insert(0, next);
+        }
+
+        self.diffs[0].first().copied().unwrap_or(0)
+    }
 }
 
 fn is_zeros(vals: &[i64]) -> bool {
@@ -64,6 +81,8 @@ fn calc_diff(vals: &[i64]) -> Vec<i64> {
     out
 }
 
+const PART1: bool = false;
+
 fn main() -> anyhow::Result<()> {
     let input = std::fs::read_to_string("input.txt")?;
 
@@ -76,7 +95,13 @@ fn main() -> anyhow::Result<()> {
                 .ok()
         })
         .map(Sequence::new)
-        .map(|mut seq| seq.predict())
+        .map(|mut seq| {
+            if PART1 {
+                seq.predict()
+            } else {
+                seq.predict_back()
+            }
+        })
         .sum();
 
     println!("{sum}");
